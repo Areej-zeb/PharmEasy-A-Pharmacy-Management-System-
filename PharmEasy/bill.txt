@@ -1,0 +1,20 @@
+------------------------------------
+            PHARMEASY
+------------------------------------
+
+Receipt
+Date: Sun Nov 26 2023
+Time: 6:17:24 PM
+Order Number: PHR561774
+
+Order Details
+Item 1: Augmentin DS - $30    Quantity: 1    Price: $30.00
+
+Subtotal: $30.00
+Tax: $3.00
+Discount: $0.00
+Total: $33.00
+
+------------------------------------
+
+Thank you for choosing PharmEasy!

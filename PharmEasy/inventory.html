@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PharmEasy - Pharmacy Inventory</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #007BFF;
+            color: #fff;
+        }
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+        }
+        .button-container button {
+            background-color: #007BFF;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+
+        .button-container button:hover {
+            background-color: #0056b3;
+        }
+        input[type="text"], input[type="number"] {
+            padding: 10px;
+            width: 100%;
+        }
+        #search-results {
+            display: none;
+            max-height: 150px;
+            overflow-y: auto;
+            position: absolute;
+            background: #fff;
+            border: 1px solid #ccc;
+        }
+        .search-result-item {
+            padding: 5px;
+            cursor: pointer;
+        }
+        .search-result-item:hover {
+            background: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Pharmacy Inventory</h1>
+
+        <div class="search-container">
+            <input type="text" id="medication-search" placeholder="Search medications...">
+            <div id="search-results"></div>
+        </div>
+
+        <!-- Medication Table -->
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Dosage</th>
+                    <th>Stock</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="medication-list">
+                <!-- Medication records will be added here -->
+            </tbody>
+        </table>
+
+        <!-- Add Medication Form -->
+        <div class="button-container">
+            <button id="add-medication-button">Add Medication</button>
+            <button id="save-changes-button">Save Changes</button>
+        </div>
+    </div>
+
+    <script>
+        function addMedication() {
+            const medicationName = prompt('Enter the medicine name:');
+            const dosage = prompt('Enter the dosage:');
+            const stock = parseInt(prompt('Enter the stock:'));
+            const price = parseFloat(prompt('Enter the price:'));
+
+            // Retrieve existing medications from local storage
+            let medicationList = JSON.parse(localStorage.getItem('medicationList')) || [];
+
+            // Check if medication already exists
+            const existingMedication = medicationList.find(
+                (medication) => medication.name === medicationName
+            );
+
+            if (existingMedication) {
+                alert('Medication already exists.');
+                return;
+            }
+
+            // Add new medication
+            const newMedication = {
+                name: medicationName,
+                dosage: dosage,
+                stock: stock,
+                price: price,
+            };
+
+            medicationList.push(newMedication);
+
+            // Store updated medication list in local storage
+            localStorage.setItem('medicationList', JSON.stringify(medicationList));
+
+            refreshMedicationList();
+        }
+
+        // Function to remove medication from the list
+        function removeMedication(medicationName) {
+            let medicationList = JSON.parse(localStorage.getItem('medicationList')) || [];
+
+            // Remove medication from the list
+            medicationList = medicationList.filter(
+                (medication) => medication.name !== medicationName
+            );
+
+            // Store updated medication list in local storage
+            localStorage.setItem('medicationList', JSON.stringify(medicationList));
+
+            refreshMedicationList();
+        }
+
+        // Function to refresh the medication list
+        function refreshMedicationList() {
+            const tableBody = document.querySelector('#medication-list');
+            tableBody.innerHTML = '';
+
+            let medicationList = JSON.parse(localStorage.getItem('medicationList')) || [];
+
+            medicationList.forEach((medication) => {
+                const row = tableBody.insertRow();
+                const cellName = row.insertCell(0);
+                const cellDosage = row.insertCell(1);
+                const cellStock = row.insertCell(2);
+                const cellActions = row.insertCell(3);
+
+                cellName.textContent = medication.name;
+                cellDosage.textContent = medication.dosage;
+                cellStock.textContent = medication.stock;
+                cellActions.innerHTML = `<button onclick="removeMedication('${medication.name}')">Remove</button>`;
+            });
+        }
+
+        // Function to generate CSV content with current medication data
+        function generateCSVContent(data) {
+            let csvContent = 'Name,Dosage,Stock,Price\n';
+            data.forEach((medication) => {
+                csvContent += `${medication.name},${medication.dosage},${medication.stock},${medication.price}\n`;
+            });
+            return csvContent;
+        }
+
+        // Function to download CSV file
+        function downloadCSV(csvContent) {
+            const encodedUri = encodeURI(`data:text/csv;charset=utf-8,${csvContent}`);
+            const link = document.createElement('a');
+            link.setAttribute('href', encodedUri);
+            link.setAttribute('download', 'medication_changes.csv');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Function to save changes to the server (simulated)
+        function saveChangesToServer(data) {
+            console.log('Simulating saving changes to the server:', data);
+
+            // Generate CSV content
+            const csvContent = generateCSVContent(data);
+
+            // Download the CSV file
+            downloadCSV(csvContent);
+
+            // Also, update the medicine_data.txt file
+            const textContent = data.map(medication => `${medication.name}, ${medication.price}`).join('\n');
+            const blob = new Blob([textContent], { type: 'text/plain' });
+            const textFileLink = document.createElement('a');
+            textFileLink.href = URL.createObjectURL(blob);
+            textFileLink.download = 'medicine_data.txt';
+            document.body.appendChild(textFileLink);
+            textFileLink.click();
+            document.body.removeChild(textFileLink);
+        }
+
+        // Event listener for "Save Changes" button
+        const saveChangesButton = document.getElementById('save-changes-button');
+        saveChangesButton.addEventListener('click', () => {
+            let medicationList = JSON.parse(localStorage.getItem('medicationList')) || [];
+            saveChangesToServer(medicationList);
+        });
+
+        // Event listener for add medication button
+        const addMedicationButton = document.getElementById('add-medication-button');
+        addMedicationButton.addEventListener('click', addMedication);
+
+        // Load initial medication list on page load
+        window.onload = function () {
+            refreshMedicationList();
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PharmEasy - Sign In</title>
+    <link rel="stylesheet" type="text/css" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <img src="bg.jpg" alt="Pharmeasy Logo">
+            </div>
+            <div class="title">
+                PharmEasy
+            </div>
+        </div>
+        <div class="tagline">
+            Pharmacy Management Made Easy
+        </div>
+        <form>
+            <label for="pharmacyname">Pharmacy Name:</label>
+            <input type="text" id="pharmacyname" name="pharmacyname" required>
+
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+
+            <input type="button" value="Sign In" onclick="signin()">
+        </form>
+    </div>
+    <script>
+        function signin() {
+            // Retrieve user input
+            const pharmacyname = document.getElementById("pharmacyname").value;
+            const password = document.getElementById("password").value;
+
+            // Retrieve existing users
+            const existingUsers = JSON.parse(localStorage.getItem("users")) || [];
+
+            // For debugging purposes, add alert messages
+            console.log("Existing Users:", existingUsers);
+
+            // Find and authenticate the user
+            const user = existingUsers.find(u => u.pharmacyname === pharmacyname && u.password === password);
+
+            if (user) {
+                alert("Sign in successful. Welcome, " + user.username);
+                location.href = "home.html";
+            } else {
+                alert("Sign in failed. Please check your credentials.");
+            }
+        }
+    </script>
+</body>
+</html>

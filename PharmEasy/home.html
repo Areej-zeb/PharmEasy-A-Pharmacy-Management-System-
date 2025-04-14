@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pharmeasy - Home Page</title>
+    <link rel="stylesheet" type="text/css" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #dceadc;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            padding: 10px 20px; /* Added padding for better spacing */
+        }
+
+        .logo {
+            margin-right: 10px;
+        }
+
+        .logo img {
+            width: 80px;
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #aecbae;
+            padding-right: 40px;
+            padding-left: 40px;
+        }
+
+        .menu {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .card {
+            background: #dceadc;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            width: 200px;
+            cursor: pointer;
+            transition: transform 0.2s ease-in-out;
+        }
+
+        .card:hover {
+            transform: scale(1.05);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .card-description {
+            font-size: 14px;
+        }
+
+        .notification {
+  background-color: #aecbae;
+  color: white;
+  text-decoration: none;
+  padding: 15px 26px;
+  position: relative;
+  display: inline-block;
+  border-radius: 20px;
+}
+
+.notification:hover {
+  background: green;
+}
+
+.notification .badge {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  padding: 5px 10px;
+  border-radius: 50%;
+  background: red;
+  color: white;
+}
+
+.notification.has-notifications {
+            background-color: #aecbae; /* Change the background color for notifications */
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <img src="bg.jpg" alt="Pharmeasy Logo">
+            </div>
+            <div class="title">
+                PharmEasy                   
+            </div>
+
+            <a href="#" class="notification" id="notificationButton">
+                <span>Inbox</span>
+                <span class="badge">!</span>
+            </a>
+
+        </div>
+        <div class="menu">
+            <div class="card" onclick="location.href='Billing.html';">
+                <div class="card-title">Billing</div>
+                <div class="card-description">Generate bill for customers.</div>
+            </div>
+
+            <div class="card" onclick="location.href='inventory.html';">
+                <div class="card-title">View Database</div>
+                <div class="card-description">Browse and search your database records.</div>
+            </div>
+
+            <div class="card" onclick="location.href='inventory.html';">
+                <div class="card-title">Add Medicine</div>
+                <div class="card-description">Add new medicines to your database.</div>
+            </div>
+
+            <div class="card" onclick="location.href='edit_records.html';">
+                <div class="card-title">Edit Records</div>
+                <div class="card-description">Edit and update existing records.</div>
+            </div>
+
+            <div class="card" onclick="location.href='stock.html';">
+                <div class="card-title">Retrieve Stock List</div>
+                <div class="card-description">Find stockist information.</div>
+            </div>
+
+            <div class="card" onclick="location.href='view_analytics.html';">
+                <div class="card-title">View Analytics</div>
+                <div class="card-description">Analyze data and view reports.</div>
+            </div>
+
+            <div class="card" onclick="location.href='attendance.html';">
+                <div class="card-title">Attendance</div>
+                <div class="card-description">Mark staff attendance.</div>
+            </div>
+
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                    // Assume you have a variable 'hasNotifications' indicating whether there are notifications
+                    const hasNotifications = true; // Set this to true/false based on your logic
+            
+                    const notificationButton = document.getElementById('notificationButton');
+                    const notificationBadge = notificationButton.querySelector('.badge');
+            
+                    if (hasNotifications) {
+                        // Show the notification badge
+                        notificationBadge.style.display = 'inline-block';
+                    } else {
+                        // Hide the notification badge
+                        notificationBadge.style.display = 'none';
+                    }
+                });
+            </script>
+            
+        </div>
+    </div>
+</body>
+</html>

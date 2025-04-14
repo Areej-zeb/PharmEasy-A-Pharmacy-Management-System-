@@ -1,0 +1,282 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PharmEasy - Stock Requirement List</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #007BFF;
+            color: #fff;
+        }
+        .button-container {
+            display: flex;
+            justify-content: space-around; /* Adjust alignment as needed */
+            margin-top: 20px; /* Adjust margin-top as per your design */
+        }
+
+        .button-container button {
+            background-color: #007BFF;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 10px; /* Adjust margin-top as per your design */
+        }
+
+        .button-container button:hover {
+            background-color: #0056b3;
+        }
+
+
+        input[type="text"], input[type="number"] {
+            padding: 10px;
+            width: 100%;
+        }
+        #search-results {
+            display: none;
+            max-height: 150px;
+            overflow-y: auto;
+            position: absolute;
+            background: #fff;
+            border: 1px solid #ccc;
+        }
+        .search-result-item {
+            padding: 5px;
+            cursor: pointer;
+        }
+        .search-result-item:hover {
+            background: #f2f2f2;
+        }
+
+        #save-changes-button {
+            background-color: #007BFF;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 20px;
+            display: block;
+            margin-left: 5px;
+            margin-right: 20px;
+        }
+
+        #save-changes-button:hover {
+            background-color: #0056b3;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Stock Requirement List</h1>
+        <form id="requirement-form">
+            <div id="medicine-search">
+                <label for="search-medicine">Search Medicine:</label>
+                <input type="text" id="search-medicine" placeholder="Enter medicine name">
+                <div id="search-results"></div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Medicine</th>
+                        <th>Quantity</th>
+                        <th>Order</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Selected medicines and quantities will be dynamically added here -->
+                </tbody>
+            </table>
+            <div class="button-container">
+                <button type="button" id="generate-requirement" >Generate Requirement</button>
+                <button type="button" id="clear-requirement">Clear Requirement</button>
+                <button type="button" id="save-changes-button">Save Changes</button>
+
+            </div>
+        </form>
+    </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const searchInput = document.getElementById("search-medicine");
+            const searchResults = document.getElementById("search-results");
+            const requirementTable = document.querySelector("table tbody");
+            const generateButton = document.getElementById("generate-requirement");
+            const clearButton = document.getElementById("clear-requirement");
+            const requirements = [];
+
+            // Read medicine data from the stock.txt file
+            function fetchMedicineData() {
+                return fetch("stock.txt")
+                    .then((response) => response.text())
+                    .then((data) => {
+                        return data.split("\n").map((line) => line.trim());
+                    })
+                    .catch((error) => {
+                        console.error("Error fetching medicine data: " + error);
+                        return [];
+                    });
+            }
+
+            function populateMedicineOptions() {
+                fetchMedicineData().then((medicines) => {
+                    searchInput.addEventListener("input", function () {
+                        const searchTerm = searchInput.value.toLowerCase();
+                        const filteredMedicines = medicines.filter((medicine) =>
+                            medicine.toLowerCase().includes(searchTerm)
+                        );
+
+                        if (searchTerm.length === 0) {
+                            searchResults.style.display = "none";
+                            searchResults.innerHTML = "";
+                        } else if (filteredMedicines.length > 0) {
+                            const resultsHTML = filteredMedicines
+                                .map(
+                                    (medicine) =>
+                                        `<div class="search-result-item">${medicine}</div>`
+                                )
+                                .join("");
+                            searchResults.innerHTML = resultsHTML;
+                            searchResults.style.display = "block";
+                        } else {
+                            searchResults.style.display = "none";
+                            searchResults.innerHTML = "";
+                        }
+                    });
+
+                    searchResults.addEventListener("click", function (e) {
+                        if (e.target.classList.contains("search-result-item")) {
+                            const medicineName = e.target.textContent;
+                            searchInput.value = ""; // Clear the search input
+                            addMedicineToRequirement(medicineName, medicines);
+                            searchResults.style.display = "none";
+                        }
+                    });
+
+                                // Function to generate CSV content with current requirements
+            function generateCSVContent(requirements) {
+                let csvContent = 'Medicine,Quantity\n';
+                requirements.forEach((item) => {
+                    csvContent += `${item.name},${item.quantity}\n`;
+                });
+                return csvContent;
+            }
+
+            // Function to download CSV file for stock requirements
+            function downloadStockCSV(csvContent) {
+                const encodedUri = encodeURI(`data:text/csv;charset=utf-8,${csvContent}`);
+                const link = document.createElement('a');
+                link.setAttribute('href', encodedUri);
+                link.setAttribute('download', 'stock.csv');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+
+            // Event listener for "Save Changes" button
+            const saveChangesButton = document.getElementById('save-changes-button');
+            saveChangesButton.addEventListener('click', () => {
+                const csvContent = generateCSVContent(requirements);
+                downloadStockCSV(csvContent);
+            });
+
+                    function addMedicineToRequirement(medicineName, medicines) {
+                        const medicineData = medicines.find((data) =>
+                            data.toLowerCase().includes(medicineName.toLowerCase())
+                        );
+
+                        if (medicineData) {
+                            const [name, quantity] = medicineData.split(":");
+                            const existingRequirement = requirements.find(
+                                (item) => item.name === name
+                            );
+
+                            if (existingRequirement) {
+                                // Requirement already added, increase quantity
+                                const orderAmount = parseInt(prompt(`Enter the quantity to order for ${name}`, 1));
+                                if (!isNaN(orderAmount)) {
+                                    existingRequirement.quantity += orderAmount;
+                                }
+                            } else {
+                                requirements.push({
+                                    name,
+                                    quantity: quantity.trim(),
+                                });
+                            }
+
+                            updateRequirementTable();
+                            generateButton.removeAttribute("disabled"); // Enable Generate Requirement button
+                        }
+                    }
+
+                    function updateRequirementTable() {
+                        requirementTable.innerHTML = ""; // Clear the requirement table
+
+                        for (const item of requirements) {
+                            const row = requirementTable.insertRow();
+                            row.insertCell(0).textContent = item.name;
+                            row.insertCell(1).textContent = item.quantity;
+                            const orderCell = row.insertCell(2);
+                            const orderButton = document.createElement("button");
+                            orderButton.textContent = "Order";
+                            orderButton.addEventListener("click", () => {
+                                const orderAmount = parseInt(prompt(`Enter the quantity to order for ${item.name}`, 1));
+                                if (!isNaN(orderAmount)) {
+                                    item.quantity = (parseInt(item.quantity) + orderAmount).toString();
+                                    updateRequirementTable();
+                                }
+                            });
+                            orderCell.appendChild(orderButton);
+                        }
+                    }
+
+                    generateButton.addEventListener("click", function () {
+                        printRequirement(requirements);
+                    });
+
+                    clearButton.addEventListener("click", function () {
+                        requirements.length = 0;
+                        updateRequirementTable();
+                        generateButton.setAttribute("disabled", "disabled"); // Disable Generate Requirement button
+                    });
+                });
+            }
+
+            populateMedicineOptions();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PharmEasy - Bill Generation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #007BFF;
+            color: #fff;
+        }
+        .total {
+            text-align: right;
+            margin-top: 20px;
+        }
+        #total-amount, #discount-amount, #final-amount {
+            font-weight: bold;
+        }
+        button {
+            background-color: #007BFF;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        select, #search-medicine {
+            padding: 10px;
+            width: 100%;
+        }
+        #search-results {
+            display: none;
+            max-height: 150px;
+            overflow-y: auto;
+            position: absolute;
+            background: #fff;
+            border: 1px solid #ccc;
+        }
+        .search-result-item {
+            padding: 5px;
+            cursor: pointer;
+        }
+        .search-result-item:hover {
+            background: #f2f2f2;
+        }
+        .quantity-input {
+            width: 50px;
+        }
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        .button-container button {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Bill Generation</h1>
+        <form id="bill-form">
+            <div id="medicine-search">
+                <label for="search-medicine">Search Medicine:</label>
+                <input type="text" id="search-medicine" placeholder="Enter medicine name">
+                <div id="search-results"></div>
+            </div>
+            <table id="bill-table">
+                <tbody>
+                    <!-- Selected medicines will be dynamically added here -->
+                </tbody>
+            </table>
+            <div class="button-container">
+                <button type="button" id="new-bill">New Bill</button>
+                <button type="submit" id="generate-bill">Generate Bill</button>
+                <button type="button" id="add-discount">Add Discount</button>
+            </div>
+            <div class="total">
+                <strong>Total Bill: $<span id="total-amount">0.00</span></strong>
+                <br>
+                <strong>Discount: $<span id="discount-amount">0.00</span></strong>
+                <br>
+                <strong>Final Bill: $<span id="final-amount">0.00</span></strong>
+            </div>
+        </form>
+    </div>
+
+    <!-- Include your JavaScript file -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const searchInput = document.getElementById("search-medicine");
+            const searchResults = document.getElementById("search-results");
+            const billTable = document.getElementById("bill-table").querySelector("tbody");
+            const totalAmountElement = document.getElementById("total-amount");
+            const selectedMedicines = [];
+            let discount = 0;
+
+            function fetchMedicineData() {
+                return fetch("medicine_data.txt")
+                    .then((response) => response.text())
+                    .then((data) => data.split("\n").map((line) => line.trim()))
+                    .catch((error) => {
+                        console.error("Error fetching medicine data: " + error);
+                        return [];
+                    });
+            }
+
+            function fetchMedicationChanges() {
+                return fetch("medication_changes.csv")
+                    .then((response) => response.text())
+                    .then((data) => data.split("\n").map((line) => line.trim()))
+                    .catch((error) => {
+                        console.error("Error fetching medication changes: " + error);
+                        return [];
+                    });
+            }
+
+            function updateStockQuantities(selectedMedicines) {
+                fetch("medication_changes.csv")
+                    .then((response) => response.text())
+                    .then((data) => {
+                        selectedMedicines.forEach((selectedMedicine) => {
+                            const regex = new RegExp(`${selectedMedicine.name},([^,]+)`);
+                            const match = data.match(regex);
+
+                            if (match && match[1] !== undefined) {
+                                const currentStock = parseInt(match[1]);
+                                const newStock = currentStock - selectedMedicine.quantity;
+                                data = data.replace(regex, `${selectedMedicine.name},${newStock}`);
+                            }
+                        });
+
+                        const blob = new Blob([data], { type: "text/csv" });
+                        const link = document.createElement("a");
+                        link.href = URL.createObjectURL(blob);
+                        link.download = "medication_changes.csv";
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    })
+                    .catch((error) => {
+                        console.error("Error updating stock quantities:", error);
+                    });
+            }
+
+            function downloadCSV(blob, filename) {
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+
+            document.getElementById("generate-bill").addEventListener("click", function (e) {
+    e.preventDefault();
+    console.log("Generating bill...");
+
+    // Update stock quantities
+    updateStockQuantities(selectedMedicines);
+
+    // Generate and download the bill text file
+    const billText = generateBillText();
+    const billBlob = new Blob([billText], { type: "text/plain" });
+    const billLink = document.createElement("a");
+    billLink.href = URL.createObjectURL(billBlob);
+    billLink.download = "bill.txt";
+    document.body.appendChild(billLink);
+    billLink.click();
+    document.body.removeChild(billLink);
+
+    // Generate and download the CSV file
+    generateCSV();
+});
+
+            // Function to generate bill text
+            function generateBillText() {
+                let billText = "------------------------------------\n";
+                billText += "            PHARMEASY\n";
+                billText += "------------------------------------\n\n";
+
+                // Receipt information
+                billText += "Receipt\n";
+                billText += "Date: " + getCurrentDate() + "\n";
+                billText += "Time: " + getCurrentTime() + "\n";
+                billText += "Order Number: " + generateOrderNumber() + "\n\n";
+
+                // Order details
+                billText += "Order Details\n";
+                selectedMedicines.forEach((medicine, index) => {
+                    billText += `Item ${index + 1}: ${medicine.name}    Quantity: ${medicine.quantity}    Price: $${(medicine.price * medicine.quantity).toFixed(2)}\n`;
+                });
+
+                // Order summary
+                billText += "\nSubtotal: $" + calculateSubtotal().toFixed(2) + "\n";
+                billText += "Tax: $" + calculateTax().toFixed(2) + "\n";
+                billText += "Discount: $" + discount.toFixed(2) + "\n";
+                billText += "Total: $" + calculateTotal().toFixed(2) + "\n\n";
+
+                // Closing message
+                billText += "------------------------------------\n\n";
+                billText += "Thank you for choosing PharmEasy!\n";
+
+                return billText;
+            }
+
+            // Function to get current date
+            function getCurrentDate() {
+                const now = new Date();
+                return now.toDateString();
+            }
+
+            // Function to get current time
+            function getCurrentTime() {
+                const now = new Date();
+                return now.toLocaleTimeString();
+            }
+
+            // Function to generate order number
+            function generateOrderNumber() {
+                // You can implement your logic to generate a unique order number here
+                return "PHR" + Math.floor(Math.random() * 1000000);
+            }
+
+            // Function to calculate subtotal
+            function calculateSubtotal() {
+                let subtotal = 0;
+                selectedMedicines.forEach((medicine) => {
+                    subtotal += medicine.price * medicine.quantity;
+                });
+                return subtotal;
+            }
+
+            // Function to calculate tax
+            function calculateTax() {
+                // You can implement your logic to calculate tax here
+                // For simplicity, let's assume tax is 10% of the subtotal
+                return 0.1 * calculateSubtotal();
+            }
+
+            // Function to calculate total
+            function calculateTotal() {
+                const subtotal = calculateSubtotal();
+                const tax = calculateTax();
+                const total = subtotal + tax - discount;
+                return total;
+            }
+
+            // Function to download bill
+            function downloadBill() {
+                const billContent = generateBillText();
+                const blob = new Blob([billContent], { type: "text/plain" });
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.download = "bill.txt";
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+
+            // Event listener for new bill
+            document.getElementById("new-bill").addEventListener("click", function () {
+                selectedMedicines.length = 0;
+                updateBillTable();
+                discount = 0;
+                calculateTotalAmount();
+            });
+
+            // Event listener for adding discount
+            document.getElementById("add-discount").addEventListener("click", function () {
+                const discountInput = parseFloat(prompt("Enter discount amount:"));
+                if (!isNaN(discountInput) && discountInput >= 0) {
+                    discount = discountInput;
+                    calculateTotalAmount();
+                    updateDiscountDisplay(discount);
+                } else {
+                    alert("Invalid discount amount. Please enter a valid positive number.");
+                }
+            });
+
+            // Function to update discount display
+            function updateDiscountDisplay(discount) {
+                const discountAmountElement = document.getElementById("discount-amount");
+                const finalAmountElement = document.getElementById("final-amount");
+                discountAmountElement.textContent = discount.toFixed(2);
+
+                // Update the final amount
+                const totalAmount = parseFloat(document.getElementById("total-amount").textContent);
+                const finalAmount = totalAmount - discount;
+                finalAmountElement.textContent = finalAmount.toFixed(2);
+            }
+
+            // Function to populate medicine options
+            function populateMedicineOptions() {
+                fetchMedicineData().then((medicines) => {
+                    searchInput.addEventListener("input", function () {
+                        const searchTerm = searchInput.value.toLowerCase();
+                        const filteredMedicines = medicines.filter((medicine) =>
+                            medicine.toLowerCase().includes(searchTerm)
+                        );
+
+                        if (searchTerm.length === 0) {
+                            searchResults.style.display = "none";
+                            searchResults.innerHTML = "";
+                        } else if (filteredMedicines.length > 0) {
+                            const resultsHTML = filteredMedicines
+                                .map(
+                                    (medicine) =>
+                                        `<div class="search-result-item" data-name="${medicine}">${extractMedicineName(medicine)}</div>`
+                                )
+                                .join("");
+                            searchResults.innerHTML = resultsHTML;
+                            searchResults.style.display = "block";
+                        } else {
+                            searchResults.style.display = "none";
+                            searchResults.innerHTML = "";
+                        }
+                    });
+
+                    searchResults.addEventListener("click", function (e) {
+                        if (e.target.classList.contains("search-result-item")) {
+                            const medicineName = e.target.dataset.name;
+                            searchInput.value = ""; // Clear the search input
+                            addMedicineToBill(medicineName);
+                            searchResults.style.display = "none";
+                        }
+                    });
+
+                    function extractMedicineName(medicine) {
+                        return medicine.split(',')[0].trim();
+                    }
+
+                    function addMedicineToBill(medicineName) {
+                        const existingMedicine = selectedMedicines.find(
+                            (item) => item.name === medicineName
+                        );
+
+                        if (existingMedicine) {
+                            // Medicine already added, increase quantity
+                            existingMedicine.quantity++;
+                        } else {
+                            const price = extractPrice(medicineName, medicines);
+                            selectedMedicines.push({
+                                name: medicineName,
+                                quantity: 1,
+                                price: price,
+                            });
+                        }
+
+                        updateBillTable();
+                    }
+
+                    function extractPrice(medicineName, medicines) {
+                        for (const medicine of medicines) {
+                            if (medicine.includes(medicineName)) {
+                                // Extract the price from the line
+                                const priceMatch = medicine.match(/- \$([\d.]+)/);
+                                if (priceMatch && priceMatch.length > 1) {
+                                    return parseFloat(priceMatch[1]);
+                                }
+                            }
+                        }
+                        // Default price if not found
+                        return 0.00;
+                    }
+
+                    function calculateTotalAmount() {
+                        let totalAmount = 0;
+                        for (const item of selectedMedicines) {
+                            totalAmount += item.price * item.quantity;
+                        }
+                        const discountAmount = discount; // Get the discount amount
+                        const finalAmount = totalAmount - discountAmount; // Calculate the final amount
+                        totalAmountElement.textContent = totalAmount.toFixed(2);
+
+                        // Update the discount amount display
+                        document.getElementById("discount-amount").textContent = discountAmount.toFixed(2);
+
+                        // Update the final amount display
+                        document.getElementById("final-amount").textContent = finalAmount.toFixed(2);
+                    }
+
+                    function updateBillTable() {
+            billTable.innerHTML = "<thead><tr><th>Item</th><th>Quantity</th><th>Price</th></tr></thead>";
+
+            for (const item of selectedMedicines) {
+                const row = billTable.insertRow();
+                row.insertCell(0).textContent = item.name.replace(/ - \$[\d.]+/, ''); // Display only the medicine name
+                const quantityCell = row.insertCell(1);
+                quantityCell.appendChild(createQuantityInput(item.quantity, item.name)); // Pass the medicine name
+                row.insertCell(2).textContent = `$${(item.price * item.quantity).toFixed(2)}`;
+            }
+            calculateTotalAmount();
+        }
+
+        function createQuantityInput(value, medicineName) {
+            const quantityInput = document.createElement("input");
+            quantityInput.type = "number";
+            quantityInput.value = value;
+            quantityInput.min = 0;
+            quantityInput.classList.add("quantity-input");
+            quantityInput.addEventListener("input", function () {
+                const existingMedicine = selectedMedicines.find((item) => item.name === medicineName);
+                if (existingMedicine) {
+                    existingMedicine.quantity = parseInt(quantityInput.value);
+                    updateBillTable();
+                }
+            });
+            return quantityInput;
+        }
+
+        document.getElementById("bill-form").addEventListener("submit", function (e) {
+            e.preventDefault();
+            generateBill();
+            downloadBill();
+        });
+
+
+                    // Function to generate CSV file with updated stock quantities
+                    function generateCSV() {
+        fetch("medication_changes.csv")
+            .then((response) => response.text())
+            .then((data) => {
+                selectedMedicines.forEach((selectedMedicine) => {
+                    const regex = new RegExp(`${selectedMedicine.name},([^,]+)`);
+                    const match = data.match(regex);
+
+                    if (match && match[1] !== undefined) {
+                        const currentStock = parseInt(match[1]);
+                        const newStock = currentStock - selectedMedicine.quantity;
+                        data = data.replace(regex, `${selectedMedicine.name},${newStock}`);
+                    }
+                });
+
+                const blob = new Blob([data], { type: "text/csv" });
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.download = "medication_changes.csv";
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            })
+            .catch((error) => {
+                console.error("Error generating CSV:", error);
+            });
+    }
+                });
+            }
+
+            populateMedicineOptions();
+        });
+    </script>
+</body>

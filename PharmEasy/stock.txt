@@ -1,0 +1,3 @@
+Paracetamol: 100 
+Aspirin: 50
+Ibuprofen: 75
